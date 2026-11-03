@@ -1,0 +1,22 @@
+PHẦN 1. PHÂN TÍCH
+Xác định "nút thắt cổ chai" (bottleneck) làm chậm trang web dựa trên biểu đồ Waterfall:
+- Qua quan sát biểu đồ Waterfall trong tab Network (F12) với chế độ Disable Cache:
+  1. Các file hình ảnh bản đồ lộ trình có dung lượng quá lớn hoặc định dạng chưa tối ưu (chưa nén, kích thước gốc quá cao) khiến thời gian tải (Download time) bị kéo dài.
+  2. Sự xuất hiện của các request bị lỗi (tô đỏ, Status 404 Not Found) khiến trình duyệt mất thời gian chờ phản hồi (Stalled/Waiting) trước khi tiếp tục kết xuất giao diện.
+  3. Kích thước file Tổng thể lớn làm nghẽn băng thông mạng cục bộ, khiến Rendering Engine phải chờ nhận đủ tài nguyên mới có thể tô vẽ hoàn chỉnh giao diện, dẫn đến tổng thời gian tải lên đến 20 giây.
+PHẦN 2. TRIỂN KHAI
+Đề xuất quy trình 3 bước tối ưu hiệu năng Portal:
+1. Bước 1: Sửa lỗi đứt link (Status 404):
+   - Rà soát lại mã nguồn hoặc đường dẫn (URL) của các tệp hình ảnh, CSS/JS đang bị lỗi 404. Cập nhật lại đúng đường dẫn tĩnh hoặc bổ sung tệp bị thiếu lên máy chủ để loại bỏ các request lỗi gây mất thời gian chờ.
+2. Bước 2: Nén và tối ưu tài nguyên hình ảnh:
+   - Chuyển đổi các hình ảnh bản đồ sang các định dạng hiện đại, dung lượng nhẹ hơn (như WebP hoặc SVG cho bản đồ vector).
+   - Nén kích thước (Compress) và giảm độ phân giải hình ảnh hiển thị cho phù hợp với khung hình thực tế trên giao diện.
+3. Bước 3: Bật cơ chế Browser Cache cho tài nguyên tĩnh:
+   - Cấu hình phản hồi HTTP Header từ phía máy chủ với các thuộc tính `Cache-Control` (ví dụ: `max-age=31536000`) cho các tài nguyên tĩnh ít thay đổi (hình ảnh, CSS, JavaScript). Điều này giúp trình duyệt lưu trữ cục bộ và không phải tải lại ở những lần truy cập sau.
+PHẦN 3. KIỂM THỬ
+- Tình huống: Khi reload lại trang web mà nhận được mã trạng thái **304 Not Modified**.
+- Giải thích vì sao đây là một tín hiệu tốt cho băng thông hệ thống:
+  + Mã 304 có nghĩa là trình duyệt đã gửi yêu cầu kiểm tra tài nguyên, và máy chủ xác nhận rằng tài nguyên đó **không hề có sự thay đổi** kể từ lần tải trước.
+  + Thay vì truyền tải lại toàn bộ nội dung file (hình ảnh, CSS, JS) qua mạng, máy chủ chỉ phản hồi một gói tin tiêu đề cực kỳ nhỏ gọn báo hiệu trình duyệt tiếp tục sử dụng bản sao đã lưu trữ sẵn trong bộ nhớ đệm (Cache).
+  + Điều này giúp **tiết kiệm tối đa băng thông mạng**, giảm tải cho máy chủ và tăng tốc độ hiển thị trang web gần như tức thì cho người dùng.
+
